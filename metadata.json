@@ -1,0 +1,6 @@
+{
+  "name": "Clinic Manager",
+  "description": "Simple clinic management app for tracking inventory, medical supplies, patient records, visits, and MySQL database connection sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
