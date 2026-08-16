@@ -2,6 +2,7 @@ package com.example.repository
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import com.example.data.MySqlConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,15 +23,17 @@ class MySqlSyncRepository(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("mysql_sync_prefs", Context.MODE_PRIVATE)
 
+    private val mySqlDataSource = com.example.data.MySqlDataSource { loadConfig() }
+
     fun loadConfig(): MySqlConfig {
         return MySqlConfig(
-            host = prefs.getString("host", "192.168.1.100") ?: "192.168.1.100",
+            host = prefs.getString("host", "192.168.50.147") ?: "192.168.50.147",
             port = prefs.getInt("port", 3306),
             databaseName = prefs.getString("db_name", "clinic_db") ?: "clinic_db",
             username = prefs.getString("username", "clinic_admin") ?: "clinic_admin",
             password = prefs.getString("password", "clinic123") ?: "clinic123",
-            apiEndpoint = prefs.getString("api_endpoint", "http://192.168.1.100:8080/api/clinic/sync")
-                ?: "http://192.168.1.100:8080/api/clinic/sync",
+            apiEndpoint = prefs.getString("api_endpoint", "http://192.168.50.147:8080/api/clinic/sync")
+                ?: "http://192.168.50.147:8080/api/clinic/sync",
             lastSyncTimestamp = prefs.getLong("last_sync", 0L),
             autoSyncEnabled = prefs.getBoolean("auto_sync", false)
         )
@@ -106,16 +109,28 @@ class MySqlSyncRepository(context: Context) {
         try {
             val sqlDump = repository.generateMySqlExportScript()
 
-            // Prepare JSON Payload
-            val rootJson = JSONObject()
-            rootJson.put("host", config.host)
-            rootJson.put("database", config.databaseName)
-            rootJson.put("syncTimestamp", System.currentTimeMillis())
-            rootJson.put("sqlDump", sqlDump)
+            // 1. Attempt direct MySQL connection sync (JDBC)
+            var jdbcSuccess = false
+            var jdbcError: String? = null
+            try {
+                mySqlDataSource.initializeTables() // Ensure tables exist
+                mySqlDataSource.executeScript(sqlDump)
+                jdbcSuccess = true
+            } catch (e: Exception) {
+                jdbcError = e.localizedMessage ?: e.message ?: "Unknown JDBC error"
+                Log.e("MySqlSyncRepository", "JDBC Sync failed: $jdbcError", e)
+            }
 
+            // 2. Attempt API sync if configured
             val endpointUrl = config.apiEndpoint
             if (endpointUrl.startsWith("http")) {
                 try {
+                    val rootJson = JSONObject()
+                    rootJson.put("host", config.host)
+                    rootJson.put("database", config.databaseName)
+                    rootJson.put("syncTimestamp", System.currentTimeMillis())
+                    rootJson.put("sqlDump", sqlDump)
+
                     val url = URL(endpointUrl)
                     val conn = url.openConnection() as HttpURLConnection
                     conn.connectTimeout = 4000
@@ -137,35 +152,39 @@ class MySqlSyncRepository(context: Context) {
 
                     return@withContext SyncResult(
                         success = true,
-                        message = "MySQL Data Sync completed successfully! Server response code: $code.",
-                        statusCode = code,
-                        timestamp = now
-                    )
-                } catch (e: Exception) {
-                    // Endpoint unreachable fallback with local backup confirmation
-                    val now = System.currentTimeMillis()
-                    saveConfig(config.copy(lastSyncTimestamp = now))
-                    return@withContext SyncResult(
-                        success = true,
-                        message = "Local data packaged and prepared for MySQL host (${config.host}:${config.port}/${config.databaseName}). Last sync timestamp updated.",
+                        message = "Sync completed! JDBC: ${if (jdbcSuccess) "Success" else "Failed ($jdbcError)"}, API: Success ($code).",
                         statusCode = 200,
                         timestamp = now
                     )
+                } catch (e: Exception) {
+                    // API failed
                 }
-            } else {
-                val now = System.currentTimeMillis()
+            }
+
+            // Final result based on JDBC success
+            val now = System.currentTimeMillis()
+            if (jdbcSuccess) {
                 saveConfig(config.copy(lastSyncTimestamp = now))
                 return@withContext SyncResult(
                     success = true,
-                    message = "Local data synchronized with MySQL database configuration.",
+                    message = "Local data seeded to MySQL successfully via direct connection.",
                     statusCode = 200,
                     timestamp = now
+                )
+            } else {
+                val hint = if (jdbcError?.contains("Communications link failure") == true) {
+                    " Ensure MySQL allows remote connections and firewall allows port 3306."
+                } else ""
+                return@withContext SyncResult(
+                    success = false,
+                    message = "Sync failed. Error: $jdbcError.$hint",
+                    statusCode = 500
                 )
             }
         } catch (e: Exception) {
             SyncResult(
                 success = false,
-                message = "Sync failed: ${e.localizedMessage}",
+                message = "Sync process error: ${e.localizedMessage}",
                 statusCode = 500
             )
         }

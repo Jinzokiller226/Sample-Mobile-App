@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -63,6 +64,7 @@ fun MySqlDatabaseScreen(
     val config by viewModel.mySqlConfig.collectAsState()
     val syncResult by viewModel.syncResult.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
+    val focusManager = LocalFocusManager.current
 
     var host by remember(config) { mutableStateOf(config.host) }
     var port by remember(config) { mutableStateOf(config.port.toString()) }
@@ -219,6 +221,7 @@ fun MySqlDatabaseScreen(
 
                 Button(
                     onClick = {
+                        focusManager.clearFocus()
                         val portNum = port.toIntOrNull() ?: 3306
                         viewModel.updateMySqlConfig(
                             MySqlConfig(
@@ -264,7 +267,10 @@ fun MySqlDatabaseScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedButton(
-                        onClick = { viewModel.testMySqlConnection() },
+                        onClick = {
+                            focusManager.clearFocus()
+                            viewModel.testMySqlConnection()
+                        },
                         enabled = !isSyncing,
                         modifier = Modifier
                             .weight(1f)
@@ -280,7 +286,10 @@ fun MySqlDatabaseScreen(
                     }
 
                     Button(
-                        onClick = { viewModel.syncToMySql() },
+                        onClick = {
+                            focusManager.clearFocus()
+                            viewModel.syncToMySql()
+                        },
                         enabled = !isSyncing,
                         modifier = Modifier
                             .weight(1f)
@@ -308,7 +317,10 @@ fun MySqlDatabaseScreen(
                     }
 
                     OutlinedButton(
-                        onClick = { viewModel.resetToSampleData() },
+                        onClick = {
+                            focusManager.clearFocus()
+                            viewModel.resetToSampleData()
+                        },
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))

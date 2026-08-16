@@ -10,53 +10,56 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.People
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import com.example.data.PatientEntity
+import com.example.ui.AuthState
+import com.example.ui.AuthViewModel
 import com.example.ui.ClinicTab
 import com.example.ui.ClinicViewModel
-import com.example.ui.dialogs.AddInventoryDialog
-import com.example.ui.dialogs.AddPatientDialog
-import com.example.ui.dialogs.AddVisitDialog
-import com.example.ui.dialogs.PatientDetailDialog
-import com.example.ui.dialogs.SqlExportDialog
-import com.example.ui.screens.DashboardScreen
-import com.example.ui.screens.InventoryScreen
-import com.example.ui.screens.MySqlDatabaseScreen
-import com.example.ui.screens.PatientsScreen
+import com.example.ui.dialogs.*
+import com.example.ui.screens.*
 import com.example.ui.theme.ClinicManagerTheme
 
 class MainActivity : ComponentActivity() {
     private val viewModel: ClinicViewModel by viewModels()
+    private val authViewModel: AuthViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             ClinicManagerTheme {
-                ClinicManagerApp(viewModel = viewModel)
+                val authState by authViewModel.authState.collectAsState()
+
+                when (authState) {
+                    is AuthState.Loading -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    is AuthState.Authenticated -> {
+                        ClinicManagerApp(viewModel = viewModel, authViewModel = authViewModel)
+                    }
+                    is AuthState.Unauthenticated -> {
+                        var showRegister by remember { mutableStateOf(false) }
+                        if (showRegister) {
+                            RegisterScreen(authViewModel = authViewModel, onLoginClick = { showRegister = false })
+                        } else {
+                            LoginScreen(authViewModel = authViewModel, onRegisterClick = { showRegister = true })
+                        }
+                    }
+                }
             }
         }
     }
@@ -64,7 +67,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ClinicManagerApp(viewModel: ClinicViewModel) {
+fun ClinicManagerApp(viewModel: ClinicViewModel, authViewModel: AuthViewModel) {
     val context = LocalContext.current
     val selectedTab by viewModel.selectedTab.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
@@ -88,10 +91,19 @@ fun ClinicManagerApp(viewModel: ClinicViewModel) {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Clinic Manager",
+                        text = "Bright Sight Optical Clinic",
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleLarge
                     )
+                },
+                actions = {
+                    IconButton(onClick = { authViewModel.logout() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = "Logout",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -125,11 +137,11 @@ fun ClinicManagerApp(viewModel: ClinicViewModel) {
                     modifier = Modifier.testTag("nav_tab_inventory")
                 )
                 NavigationBarItem(
-                    selected = selectedTab == ClinicTab.MYSQL_DB,
-                    onClick = { viewModel.selectTab(ClinicTab.MYSQL_DB) },
-                    icon = { Icon(Icons.Default.Dns, contentDescription = "MySQL DB") },
-                    label = { Text("MySQL DB") },
-                    modifier = Modifier.testTag("nav_tab_mysql")
+                    selected = selectedTab == ClinicTab.ACCOUNT,
+                    onClick = { viewModel.selectTab(ClinicTab.ACCOUNT) },
+                    icon = { Icon(Icons.Default.AccountCircle, contentDescription = "Account") },
+                    label = { Text("Account") },
+                    modifier = Modifier.testTag("nav_tab_account")
                 )
             }
         }
@@ -159,7 +171,11 @@ fun ClinicManagerApp(viewModel: ClinicViewModel) {
                     viewModel = viewModel,
                     onExportSqlClick = { viewModel.generateSqlScript() }
                 )
+                ClinicTab.ACCOUNT -> AccountScreen(
+                    authViewModel = authViewModel
+                )
             }
+
 
             // Dialog Modals
             if (showAddPatientDialog) {

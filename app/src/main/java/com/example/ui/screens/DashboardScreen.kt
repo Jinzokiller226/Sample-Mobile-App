@@ -46,9 +46,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.data.InventoryItemEntity
+import com.example.data.MySqlConfig
+import com.example.data.VisitRecordEntity
 import com.example.ui.ClinicTab
 import com.example.ui.ClinicViewModel
+import com.example.ui.theme.ClinicManagerTheme
 import com.example.ui.theme.HealthyGreen
 import com.example.ui.theme.LowStockAmber
 import com.example.ui.theme.OutOfStockRed
@@ -68,6 +73,44 @@ fun DashboardScreen(
     val visits by viewModel.visits.collectAsState()
     val mySqlConfig by viewModel.mySqlConfig.collectAsState()
 
+    DashboardContent(
+        patientCount = patientCount,
+        inventoryCount = inventoryCount,
+        lowStockCount = lowStockCount,
+        visitCount = visitCount,
+        lowStockItems = lowStockItems,
+        visits = visits,
+        mySqlConfig = mySqlConfig,
+        onAddPatientClick = onAddPatientClick,
+        onAddInventoryClick = onAddInventoryClick,
+        onExportSqlClick = onExportSqlClick,
+        onPatientsMetricClick = { viewModel.selectTab(ClinicTab.PATIENTS) },
+        onInventoryMetricClick = { viewModel.selectTab(ClinicTab.INVENTORY) },
+        onLowStockMetricClick = {
+            viewModel.inventoryCategoryFilter.value = "Low Stock"
+            viewModel.selectTab(ClinicTab.INVENTORY)
+        },
+        onMySqlConfigClick = { viewModel.selectTab(ClinicTab.MYSQL_DB) }
+    )
+}
+
+@Composable
+fun DashboardContent(
+    patientCount: Int,
+    inventoryCount: Int,
+    lowStockCount: Int,
+    visitCount: Int,
+    lowStockItems: List<InventoryItemEntity>,
+    visits: List<VisitRecordEntity>,
+    mySqlConfig: MySqlConfig,
+    onAddPatientClick: () -> Unit,
+    onAddInventoryClick: () -> Unit,
+    onExportSqlClick: () -> Unit,
+    onPatientsMetricClick: () -> Unit,
+    onInventoryMetricClick: () -> Unit,
+    onLowStockMetricClick: () -> Unit,
+    onMySqlConfigClick: () -> Unit
+) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -91,7 +134,7 @@ fun DashboardScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Real-time inventory stock, patient records & MySQL sync status",
+                        text = "Real-time inventory stock, patient records",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
                     )
@@ -113,7 +156,7 @@ fun DashboardScreen(
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .weight(1f)
-                            .clickable { viewModel.selectTab(ClinicTab.PATIENTS) }
+                            .clickable { onPatientsMetricClick() }
                     )
                     MetricCard(
                         title = "Inventory Items",
@@ -122,7 +165,7 @@ fun DashboardScreen(
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier
                             .weight(1f)
-                            .clickable { viewModel.selectTab(ClinicTab.INVENTORY) }
+                            .clickable { onInventoryMetricClick() }
                     )
                 }
 
@@ -137,10 +180,7 @@ fun DashboardScreen(
                         color = if (lowStockCount > 0) LowStockAmber else HealthyGreen,
                         modifier = Modifier
                             .weight(1f)
-                            .clickable {
-                                viewModel.inventoryCategoryFilter.value = "Low Stock"
-                                viewModel.selectTab(ClinicTab.INVENTORY)
-                            }
+                            .clickable { onLowStockMetricClick() }
                     )
                     MetricCard(
                         title = "Total Visits",
@@ -162,7 +202,7 @@ fun DashboardScreen(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { viewModel.selectTab(ClinicTab.MYSQL_DB) }
+                    .clickable { onMySqlConfigClick() }
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
@@ -243,15 +283,15 @@ fun DashboardScreen(
                         Text("Add Stock", style = MaterialTheme.typography.labelMedium)
                     }
 
-                    OutlinedButton(
-                        onClick = onExportSqlClick,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.Code, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("MySQL SQL", style = MaterialTheme.typography.labelMedium)
-                    }
+//                    OutlinedButton(
+//                        onClick = onExportSqlClick,
+//                        modifier = Modifier.weight(1f),
+//                        shape = RoundedCornerShape(10.dp)
+//                    ) {
+//                        Icon(imageVector = Icons.Default.Code, contentDescription = null, modifier = Modifier.size(16.dp))
+//                        Spacer(modifier = Modifier.width(4.dp))
+//                        Text("MySQL SQL", style = MaterialTheme.typography.labelMedium)
+//                    }
                 }
             }
         }
@@ -390,6 +430,79 @@ fun DashboardScreen(
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+fun DashboardPreview() {
+    val sampleLowStockItems = listOf(
+        InventoryItemEntity(
+                     itemCode = "MED-002",
+   name = "Paracetamol 500mg Tablets",
+            category = "Medicines",
+            quantity = 18,
+            reorderLevel = 50,
+            unit = "Tablets",
+            unitCost = 0.05,
+            unitPrice = 0.20,
+            expiryDate = "2027-11-20",
+            supplier = "MediHealth Corp"
+        ),
+        InventoryItemEntity(
+            itemCode = "SUP-102",
+            name = "Nitrile Exam Gloves (Medium)",
+            category = "Consumables",
+            quantity = 12,
+            reorderLevel = 30,
+            unit = "Boxes",
+            unitCost = 4.50,
+            unitPrice = 9.00,
+            expiryDate = "2028-06-30",
+            supplier = "SafeTouch Medical"
+        )
+    )
+
+    val sampleVisits = listOf(
+        VisitRecordEntity(
+            patientId = 1,
+            patientName = "Eleanor Vance",
+            visitDate = "2026-08-10",
+            diagnosis = "Acute Upper Respiratory Infection",
+            prescription = "Amoxicillin 500mg",
+            doctorNotes = "Patient presents with low fever and cough.",
+            cost = 45.00
+        ),
+        VisitRecordEntity(
+            patientId = 2,
+            patientName = "Marcus Sterling",
+            visitDate = "2026-08-09",
+            diagnosis = "Routine Diabetes Checkup",
+            prescription = "Refill Metformin 850mg",
+            doctorNotes = "Glucose levels stable.",
+            cost = 35.00
+        )
+    )
+
+    ClinicManagerTheme {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            DashboardContent(
+                patientCount = 142,
+                inventoryCount = 56,
+                lowStockCount = sampleLowStockItems.size,
+                visitCount = 890,
+                lowStockItems = sampleLowStockItems,
+                visits = sampleVisits,
+                mySqlConfig = MySqlConfig(),
+                onAddPatientClick = {},
+                onAddInventoryClick = {},
+                onExportSqlClick = {},
+                onPatientsMetricClick = {},
+                onInventoryMetricClick = {},
+                onLowStockMetricClick = {},
+                onMySqlConfigClick = {}
+            )
+        }
+    }
+}
+
 @Composable
 private fun MetricCard(
     title: String,
@@ -434,3 +547,5 @@ private fun MetricCard(
         }
     }
 }
+
+

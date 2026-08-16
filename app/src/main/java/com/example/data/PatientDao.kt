@@ -13,24 +13,15 @@ interface PatientDao {
     @Query("SELECT * FROM patients ORDER BY name ASC")
     fun getAllPatients(): Flow<List<PatientEntity>>
 
-    @Query("SELECT * FROM patients WHERE id = :id")
-    fun getPatientById(id: Long): Flow<PatientEntity?>
-
-    @Query("SELECT * FROM patients WHERE name LIKE '%' || :query || '%' OR phone LIKE '%' || :query || '%' OR patientCode LIKE '%' || :query || '%' ORDER BY name ASC")
+    @Query("SELECT * FROM patients WHERE name LIKE '%' || :query || '%' OR patient_code LIKE '%' || :query || '%' ORDER BY name ASC")
     fun searchPatients(query: String): Flow<List<PatientEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertPatient(patient: PatientEntity): Long
+    suspend fun insert(patient: PatientEntity): Long
 
     @Update
-    suspend fun updatePatient(patient: PatientEntity)
+    suspend fun update(patient: PatientEntity)
 
     @Delete
-    suspend fun deletePatient(patient: PatientEntity)
-
-    @Query("SELECT COUNT(*) FROM patients")
-    fun getPatientCount(): Flow<Int>
-
-    @Query("SELECT * FROM patients")
-    suspend fun getAllPatientsSnapshot(): List<PatientEntity>
+    suspend fun delete(patient: PatientEntity)
 }

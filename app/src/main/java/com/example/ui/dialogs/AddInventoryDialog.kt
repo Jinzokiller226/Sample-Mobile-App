@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -57,6 +58,7 @@ fun AddInventoryDialog(
     var supplier by remember { mutableStateOf("") }
 
     val categories = listOf("Medicines", "Consumables", "Equipment")
+    val focusManager = LocalFocusManager.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -198,6 +200,7 @@ fun AddInventoryDialog(
         confirmButton = {
             Button(
                 onClick = {
+                    focusManager.clearFocus()
                     if (name.isNotBlank()) {
                         onConfirm(
                             name,
@@ -220,7 +223,10 @@ fun AddInventoryDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                focusManager.clearFocus()
+                onDismiss()
+            }) {
                 Text("Cancel")
             }
         }

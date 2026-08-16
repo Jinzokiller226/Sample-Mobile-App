@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -52,6 +53,7 @@ fun AddVisitDialog(
     var prescription by remember { mutableStateOf("") }
     var doctorNotes by remember { mutableStateOf("") }
     var cost by remember { mutableStateOf("40.00") }
+    val focusManager = LocalFocusManager.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -129,6 +131,7 @@ fun AddVisitDialog(
         confirmButton = {
             Button(
                 onClick = {
+                    focusManager.clearFocus()
                     if (diagnosis.isNotBlank()) {
                         onConfirm(
                             patientId,
@@ -149,7 +152,10 @@ fun AddVisitDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                focusManager.clearFocus()
+                onDismiss()
+            }) {
                 Text("Cancel")
             }
         }

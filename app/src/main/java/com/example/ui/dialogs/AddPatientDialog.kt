@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -63,6 +64,7 @@ fun AddPatientDialog(
 
     val genders = listOf("Female", "Male", "Other")
     val bloodTypes = listOf("O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-")
+    val focusManager = LocalFocusManager.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -217,6 +219,7 @@ fun AddPatientDialog(
         confirmButton = {
             Button(
                 onClick = {
+                    focusManager.clearFocus()
                     if (name.isNotBlank()) {
                         onConfirm(
                             name,
@@ -239,7 +242,10 @@ fun AddPatientDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                focusManager.clearFocus()
+                onDismiss()
+            }) {
                 Text("Cancel")
             }
         }

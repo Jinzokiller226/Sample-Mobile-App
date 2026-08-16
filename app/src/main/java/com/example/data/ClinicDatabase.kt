@@ -6,14 +6,20 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [PatientEntity::class, InventoryItemEntity::class, VisitRecordEntity::class],
+    entities = [
+        UserAccountEntity::class,
+        PatientEntity::class,
+        InventoryItemEntity::class,
+        VisitRecordEntity::class
+    ],
     version = 1,
     exportSchema = false
 )
 abstract class ClinicDatabase : RoomDatabase() {
+    abstract fun userDao(): UserDao
     abstract fun patientDao(): PatientDao
     abstract fun inventoryDao(): InventoryDao
-    abstract fun visitRecordDao(): VisitRecordDao
+    abstract fun visitDao(): VisitDao
 
     companion object {
         @Volatile

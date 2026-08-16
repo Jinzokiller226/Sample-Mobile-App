@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 enum class ClinicTab {
-    DASHBOARD, PATIENTS, INVENTORY, MYSQL_DB
+    DASHBOARD, PATIENTS, INVENTORY, MYSQL_DB, ACCOUNT
 }
 
 class ClinicViewModel(application: Application) : AndroidViewModel(application) {
@@ -266,6 +266,7 @@ class ClinicViewModel(application: Application) : AndroidViewModel(application) 
     fun updateMySqlConfig(config: MySqlConfig) {
         _mySqlConfig.value = config
         mySqlSyncRepository.saveConfig(config)
+        clinicRepository.triggerRefresh()
         _userMessage.value = "MySQL connection configuration saved."
     }
 
